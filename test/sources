@@ -1,0 +1,57 @@
+TARGET=bigint-test
+CC=gcc
+LD=gcc
+CFLAGS="-Wall -Werror=implicit-function-declaration -I.."
+LDFLAGS="-L../bigint -lrt"
+
+[ -z "$FEATURES" ] && FEATURES="debug"
+
+SOURCES="
+benchmark.c
+cpu_utils.c
+main.c
+rand32.c
+test.c
+utils.c
+../cpuid/cpu_features.c
+"
+
+unset use_debug use_release
+
+CFLAGS_RELEASE="-O2 -fomit-frame-pointer"
+LDFLAGS_RELEASE="-lbigint"
+
+CFLAGS_DEBUG="-g"
+LDFLAGS_DEBUG="-g -lbigint-dbg"
+
+for feat in $FEATURES ; do
+ case $feat in
+  "debug")
+    use_debug=1
+    ;;
+  "release")
+    use_release=1
+    ;;
+  *)
+    echo "Unknown feature $feat"
+    exit 1
+    ;;
+ esac
+done
+
+if [ -n "$use_debug" ]; then
+ CONFIG="DEBUG"
+ CFLAGS="$CFLAGS $CFLAGS_DEBUG"
+ LDFLAGS="$LDFLAGS $LDFLAGS_DEBUG"
+ TARGET="$TARGET-dbg"
+else
+ if [ -z "$use_release" ]; then
+  echo 'Use FEATURES="release" or FEATURES="debug"'
+  exit 1
+ fi
+ CONFIG="RELEASE"
+ CFLAGS="$CFLAGS $CFLAGS_RELEASE"
+ LDFLAGS="$LDFLAGS $LDFLAGS_RELEASE"
+fi
+
+unset feat use_debug use_release use_generic
