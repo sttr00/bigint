@@ -28,17 +28,17 @@ loop1:
  mov     pc, lr
 
 /*
- void _bigint_muladdw(bigint_word_t *res, const bigint_word_t *a, bigint_word_t w, int size);
+ void _bigint_muladdw_umaal(bigint_word_t *res, const bigint_word_t *a, bigint_word_t w, int size);
   res  = r0
   a    = r1
   w    = r2
   size = r3
  */
 
-.global _bigint_muladdw
-.hidden _bigint_muladdw
+.global _bigint_muladdw_umaal
+.hidden _bigint_muladdw_umaal
 
-_bigint_muladdw:
+_bigint_muladdw_umaal:
  stmfd   sp!, {r4-r6}
  mov     r4, #0
 
@@ -53,6 +53,37 @@ loop2:
 
  str     r4, [r0]
  ldmfd   sp!, {r4-r6}
+ mov     pc, lr
+
+/*
+ void _bigint_muladdw(bigint_word_t *res, const bigint_word_t *a, bigint_word_t w, int size);
+  res  = r0
+  a    = r1
+  w    = r2
+  size = r3
+ */
+
+.global _bigint_muladdw
+.hidden _bigint_muladdw
+
+_bigint_muladdw:
+ stmfd   sp!, {r4-r7}
+ mov     r4, #0
+ mov     r7, #0
+
+loop4:
+ ldr     r6, [r0]
+ ldr     r5, [r1], #4
+ umlal   r6, r7, r2, r5
+ adds    r6, r6, r4
+ adc     r4, r7, #0
+ str     r6, [r0], #4
+ subs    r3, r3, #1
+ mov     r7, #0
+ bne     loop4
+
+ str     r4, [r0]
+ ldmfd   sp!, {r4-r7}
  mov     pc, lr
 
 /*

@@ -77,7 +77,13 @@ void bigint_init_dispatch_table()
   set_func2(muladdw, mulx);
   set_func2(mulsubw, mulx);
  }
+ #elif defined(ARCH_ARM)
+ declare_mul(muladdw_umaal);
+
+ if (feat & CPU_FEAT_UMAAL)
+  set_func2(muladdw, umaal);
  #endif
+
  initialized = 1;
 }
 

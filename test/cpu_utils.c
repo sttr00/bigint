@@ -26,6 +26,7 @@ static const struct feature_def fd[] =
  { "rdseed", CPU_FEAT_RDSEED    },
  { "adx",    CPU_FEAT_ADX       },
  { "sha",    CPU_FEAT_SHA       },
+ { "umaal",  CPU_FEAT_UMAAL     },
  { "neon",   CPU_FEAT_NEON      }
 };
 

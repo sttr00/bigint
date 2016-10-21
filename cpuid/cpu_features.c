@@ -83,6 +83,7 @@ static struct
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <stdlib.h>
 
 static uint32_t parse_feature(char *start, char *end)
 {
@@ -136,6 +137,7 @@ static uint32_t get_cpu_features_real()
  int fd = open("/proc/cpuinfo", O_RDONLY);
  if (fd >= 0)
  {
+  int cpu_arch = 0;
   int data_size = 0, line_len, pos;
   for (;;)
   {
@@ -166,6 +168,20 @@ static uint32_t get_cpu_features_real()
        if (!start) start = p;
       if (start) feat |= parse_feature(start, end);
      }
+    } else
+    if (line_len > 16 && !memcmp(buf + pos, "CPU architecture", 16))
+    {
+     char *p = memchr(buf + pos, ':', line_len);
+     if (p)
+     {
+      for (p++; p != end; p++)
+       if (*p != ' ' && *p != '\t')
+       {
+        *end = 0;
+        cpu_arch = atoi(p);
+        break;
+       }
+     }
     }
     pos += line_len + 1;
    }
@@ -173,6 +189,10 @@ static uint32_t get_cpu_features_real()
    memmove(buf, buf + pos, data_size);
   }
   close(fd);
+  #ifdef ARCH_ARM
+  if (!cpu_arch) cpu_arch = 7; /* assume ARMv7 */
+  if (cpu_arch >= 6) feat |= CPU_FEAT_UMAAL;
+  #endif
  }
 #endif
 
