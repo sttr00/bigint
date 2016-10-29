@@ -48,7 +48,7 @@ declare_mulsub(mulsubw_sse2);
 #elif defined(BIGINT_ENABLE_BMI2)
 declare_mul(mulw_mulx);
 declare_mul(muladdw_mulx);
-declare_mul(mulsubw_mulx);
+declare_mulsub(mulsubw_mulx);
 #define call_mulw    _bigint_mulw_mulx
 #define call_muladdw _bigint_muladdw_mulx
 #define call_mulsubw _bigint_mulsubw_mulx
@@ -59,7 +59,7 @@ declare_mul(mulsubw_mulx);
 #if defined(BIGINT_ENABLE_BMI2)
 declare_mul(mulw_mulx);
 declare_mul(muladdw_mulx);
-declare_mul(mulsubw_mulx);
+declare_mulsub(mulsubw_mulx);
 #define call_mulw    _bigint_mulw_mulx
 #define call_muladdw _bigint_muladdw_mulx
 #define call_mulsubw _bigint_mulsubw_mulx

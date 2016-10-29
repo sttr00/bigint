@@ -51,6 +51,15 @@ for feat in $FEATURES ; do
   "generic")
     use_generic=1
     ;;
+  "stdisp")
+    CPPFLAGS="$CPPFLAGS -DBIGINT_STATIC_DISPATCH"
+    ;;
+  "sse2")
+    CPPFLAGS="$CPPFLAGS -DBIGINT_ENABLE_SSE2"
+    ;;
+  "bmi2")
+    CPPFLAGS="$CPPFLAGS -DBIGINT_ENABLE_BMI2"
+    ;;
   *)
     echo "Unknown feature $feat"
     exit 1
@@ -62,6 +71,7 @@ if [ -n "$use_debug" ]; then
  CONFIG="DEBUG"
  CFLAGS="$CFLAGS $CFLAGS_DEBUG"
  LDFLAGS="$LDFLAGS $LDFLAGS_DEBUG"
+ CPPFLAGS="$CPPFLAGS -D_DEBUG"
  TARGET="$TARGET-dbg"
 else
  if [ -z "$use_release" ]; then
@@ -71,6 +81,7 @@ else
  CONFIG="RELEASE"
  CFLAGS="$CFLAGS $CFLAGS_RELEASE"
  LDFLAGS="$LDFLAGS $LDFLAGS_RELEASE"
+ CPPFLAGS="$CPPFLAGS -DNDEBUG"
 fi
 
 if [ -z "$use_generic" ]; then
