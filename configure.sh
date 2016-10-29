@@ -481,8 +481,8 @@ all_objs="$all_objs $objs"
 done
 
 # clean rule
-echo -e "clean:\n\trm -f $all_objs $CONFIG/.*FLAGS $CONFIG/$BUILDLOG\n\trm -f $TARGETS" >> $OUTFILE
-echo -e "\trmdir --ignore-fail-on-non-empty $CONFIG" >> $OUTFILE
+echo -e "clean:\n\t@rm -f $all_objs $CONFIG/.*FLAGS $CONFIG/$BUILDLOG\n\t@rm -f $TARGETS" >> $OUTFILE
+echo -e "\t@if [ -d \"$CONFIG\" ]; then rmdir --ignore-fail-on-non-empty $CONFIG ; else true; fi" >> $OUTFILE
 if [ -n "$moc_rm" ]; then
  echo -e "\trm -f $moc_rm" >> $OUTFILE
 fi
