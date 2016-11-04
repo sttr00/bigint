@@ -51,7 +51,15 @@ static __inline uint32_t xgetbv(uint32_t val)
 
 static __inline void cpuid(uint32_t *out, uint32_t eax, uint32_t ecx)
 {
- asm ("cpuid\n\t" : "=a"(out[0]), "=b"(out[1]), "=c"(out[2]), "=d"(out[3]) : "0"(eax), "2"(ecx));
+#if defined(__PIC__) && !defined(__amd64__)
+ asm ("movl %%ebx, %%esi\n\t"
+      "cpuid\n\t"
+      "xchgl %%ebx, %%esi\n\t" :
+      "=a"(out[0]), "=S"(out[1]), "=c"(out[2]), "=d"(out[3]) : "0"(eax), "2"(ecx));
+#else
+ asm ("cpuid\n\t" :
+      "=a"(out[0]), "=b"(out[1]), "=c"(out[2]), "=d"(out[3]) : "0"(eax), "2"(ecx));
+#endif
 }
 #elif defined(__arm__)
 #if defined(linux) || defined(__linux__) || defined(ANDROID)
