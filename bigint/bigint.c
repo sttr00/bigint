@@ -6,28 +6,45 @@
 #include <string.h>
 #include <assert.h>
 
-#define MALLOC_ALIGN 16
 #define MAX_STACK_ALLOC 8192
+
+#ifdef BIGINT_MALLOC_ALIGN
+
+#define _bigint_alloca(size) \
+ (void *) (((uintptr_t) alloca(((size)<<BIGINT_WORD_SHIFT) + BIGINT_MALLOC_ALIGN) + BIGINT_MALLOC_ALIGN) & ~((uintptr_t) BIGINT_MALLOC_ALIGN-1))
 
 static __inline bigint_word_t *_bigint_malloc(int words)
 {
- uint8_t *p = (uint8_t *) malloc((words<<BIGINT_WORD_SHIFT) + MALLOC_ALIGN) + MALLOC_ALIGN;
- int offset = ((uintptr_t) p) & (MALLOC_ALIGN-1);
+ uint8_t *p = (uint8_t *) malloc((words<<BIGINT_WORD_SHIFT) + BIGINT_MALLOC_ALIGN) + BIGINT_MALLOC_ALIGN;
+ uintptr_t offset = ((uintptr_t) p) & (BIGINT_MALLOC_ALIGN-1);
  p -= offset;
- p[-1] = MALLOC_ALIGN - offset;
+ p[-1] = BIGINT_MALLOC_ALIGN - offset;
  return (bigint_word_t *) p;
 }
 
 static __inline void _bigint_free(void *p)
 {
- int offset;
+ uintptr_t offset;
  if (!p) return;
  offset = ((const uint8_t *) p)[-1];
  free((uint8_t *) p - offset);
 }
 
+#else
+
+#define _bigint_alloca(words) alloca((words)<<BIGINT_WORD_SHIFT)
+
+static __inline bigint_word_t *_bigint_malloc(int words)
+{
+ return (bigint_word_t *) malloc(words<<BIGINT_WORD_SHIFT);
+}
+
+#define _bigint_free free
+
+#endif
+
 #define _bigint_alloc_temp(words) \
- ((words) <= (MAX_STACK_ALLOC>>BIGINT_WORD_SHIFT)? alloca((words)<<BIGINT_WORD_SHIFT) : _bigint_malloc(words))
+ ((words) <= (MAX_STACK_ALLOC>>BIGINT_WORD_SHIFT)? _bigint_alloca(words) : _bigint_malloc(words))
 
 #define _bigint_free_temp(p, words) \
  do { if ((words) >= (MAX_STACK_ALLOC>>BIGINT_WORD_SHIFT)) _bigint_free(p); } while (0)
@@ -64,9 +81,9 @@ bigint_t bigint_create_word(bigint_word_t w)
 
 bigint_t bigint_create_buf(const bigint_word_t *data, int size, int negative, int copy_data)
 {
- assert(data && size);
  bigint_t num = (bigint_t) malloc(sizeof(*num));
  num->neg = !!negative;
+ assert(data && size);
  if (copy_data)
  {
   num->buf = _bigint_malloc(size);
