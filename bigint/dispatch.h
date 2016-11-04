@@ -24,8 +24,6 @@ declare_addsubw(mulsubw_c);
 declare_shift(shl_c);
 declare_shift(shr_c);
 #else
-declare_addsub(add);
-declare_addsub(sub);
 declare_addsubw(addw);
 declare_addsubw(subw);
 declare_shift(shl);
@@ -39,9 +37,13 @@ declare_shift(shr);
 #if defined(ARCH_X86)
 /* x86 */
 #if defined(BIGINT_ENABLE_SSE2)
+declare_addsub(add_sse2);
+declare_addsub(sub_sse2);
 declare_mul(mulw_sse2);
 declare_mul(muladdw_sse2);
 declare_mulsub(mulsubw_sse2);
+#define call_add     _bigint_add_sse2
+#define call_sub     _bigint_sub_sse2
 #define call_mulw    _bigint_mulw_sse2
 #define call_muladdw _bigint_muladdw_sse2
 #define call_mulsubw _bigint_mulsubw_sse2
@@ -88,12 +90,20 @@ declare_mul(muladdw_umaal);
 
 #else /* BIGINT_DISABLE_ASM not defined */
 
-#define call_add     _bigint_add
-#define call_sub     _bigint_sub
 #define call_addw    _bigint_addw
 #define call_subw    _bigint_subw
 #define call_shl     _bigint_shl
 #define call_shr     _bigint_shr
+
+#ifndef call_add
+declare_addsub(add);
+#define call_add     _bigint_add
+#endif
+
+#ifndef call_sub
+declare_addsub(sub);
+#define call_sub     _bigint_sub
+#endif
 
 #ifndef call_mulw
 declare_mul(mulw);

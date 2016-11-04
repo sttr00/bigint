@@ -12,14 +12,34 @@ struct bigint_dispatch_table _bigint_dispatch;
 #define set_func2(name, suffix) \
  _bigint_dispatch.func_##name = _bigint_##name##_##suffix
 
+declare_addsub(add);
+declare_addsub(sub);
+declare_mul(mulw);
+declare_mul(muladdw);
+declare_mulsub(mulsubw);
+
+#if defined(ARCH_X86)
+declare_addsub(add_sse2);
+declare_addsub(sub_sse2);
+declare_mul(mulw_sse2);
+declare_mul(muladdw_sse2);
+declare_mulsub(mulsubw_sse2);
+#endif
+
+#if defined(ARCH_X86) || defined(ARCH_X86_64)
+declare_mul(mulw_mulx);
+declare_mul(muladdw_mulx);
+declare_mulsub(mulsubw_mulx);
+#endif
+
+#if defined(ARCH_ARM)
+declare_mul(muladdw_umaal);
+#endif
+
 void bigint_init_dispatch_table()
 {
  uint32_t feat;
  if (initialized) return;
-
- declare_mul(mulw);
- declare_mul(muladdw);
- declare_mulsub(mulsubw);
 
  set_func(add);
  set_func(sub);
@@ -33,15 +53,6 @@ void bigint_init_dispatch_table()
 
  feat = get_cpu_features();
  #if defined(ARCH_X86)
- declare_addsub(add_sse2);
- declare_addsub(sub_sse2);
- declare_mul(mulw_sse2);
- declare_mul(muladdw_sse2);
- declare_mulsub(mulsubw_sse2);
- declare_mul(mulw_mulx);
- declare_mul(muladdw_mulx);
- declare_mulsub(mulsubw_mulx);
-
  #if 0
  if (feat & CPU_FEAT_AVX2)
  {
@@ -67,10 +78,6 @@ void bigint_init_dispatch_table()
   set_func2(mulsubw, mulx);
  }
  #elif defined(ARCH_X86_64)
- declare_mul(mulw_mulx);
- declare_mul(muladdw_mulx);
- declare_mulsub(mulsubw_mulx);
-
  if (feat & CPU_FEAT_BMI2)
  {
   set_func2(mulw, mulx);
@@ -78,8 +85,6 @@ void bigint_init_dispatch_table()
   set_func2(mulsubw, mulx);
  }
  #elif defined(ARCH_ARM)
- declare_mul(muladdw_umaal);
-
  if (feat & CPU_FEAT_UMAAL)
   set_func2(muladdw, umaal);
  #endif
