@@ -31,7 +31,7 @@
 
 static __inline int _bigint_w_clz_impl(bigint_word_t val) 
 {
- int res;
+ bigint_word_t res;
  asm ("bsr%z1 %1, %0\n\t"
 #ifdef ARCH_X86
       "xorl $31, %0\n\t"
@@ -49,7 +49,7 @@ static __inline int _bigint_w_clz_impl(bigint_word_t val)
 
 static __inline int _bigint_w_ctz_impl(bigint_word_t val) 
 {
- int res;
+ bigint_word_t res;
  asm ("bsf%z1 %1, %0\n\t" : "=r"(res) : "rm"(val) : "cc");
  return res;
 }
