@@ -32,13 +32,13 @@
 static __inline int _bigint_w_clz_impl(bigint_word_t val) 
 {
  bigint_word_t res;
- asm ("bsr%z1 %1, %0\n\t"
-#ifdef ARCH_X86
-      "xorl $31, %0\n\t"
-#else
-      "xorq $63, %0\n\t"
-#endif
- : "=r"(res) : "rm"(val) : "cc");
+ #ifdef ARCH_X86
+ asm ("bsrl %1, %0\n\t"
+      "xorl $31, %0\n\t" : "=r"(res) : "rm"(val) : "cc");
+ #else
+ asm ("bsrq %1, %0\n\t"
+      "xorq $63, %0\n\t" : "=r"(res) : "rm"(val) : "cc");
+ #endif
  return res;
 }
 
@@ -50,17 +50,33 @@ static __inline int _bigint_w_clz_impl(bigint_word_t val)
 static __inline int _bigint_w_ctz_impl(bigint_word_t val) 
 {
  bigint_word_t res;
- asm ("bsf%z1 %1, %0\n\t" : "=r"(res) : "rm"(val) : "cc");
+ #ifdef ARCH_X86
+ asm ("bsfl %1, %0\n\t" : "=r"(res) : "rm"(val) : "cc");
+ #else
+ asm ("bsfq %1, %0\n\t" : "=r"(res) : "rm"(val) : "cc");
+ #endif
  return res;
 }
 
 #endif /* _bigint_w_ctz */
 
+#ifdef ARCH_X86
+
 #define _bigint_ww_mul(a, b, res_lo, res_hi) \
- asm ("mul%z3 %3\n\t" : "=a"(res_lo), "=d"(res_hi) : "%0"(a), "rm"(b) : "cc")
+ asm ("mull %3\n\t" : "=a"(res_lo), "=d"(res_hi) : "%0"(a), "rm"(b) : "cc")
 
 #define _bigint_dw_ndiv(a_lo, a_hi, b, q, r) \
- asm ("div%z4 %4\n\t" : "=a"(q), "=d"(r) : "0"(a_lo), "1"(a_hi), "rm"(b) : "cc")
+ asm ("divl %4\n\t" : "=a"(q), "=d"(r) : "0"(a_lo), "1"(a_hi), "rm"(b) : "cc")
+
+#else
+
+#define _bigint_ww_mul(a, b, res_lo, res_hi) \
+ asm ("mulq %3\n\t" : "=a"(res_lo), "=d"(res_hi) : "%0"(a), "rm"(b) : "cc")
+
+#define _bigint_dw_ndiv(a_lo, a_hi, b, q, r) \
+ asm ("divq %4\n\t" : "=a"(q), "=d"(r) : "0"(a_lo), "1"(a_hi), "rm"(b) : "cc")
+
+#endif
 
 #ifndef BIGINT_DISABLE_ASM
 extern bigint_word_t _bigint_td_ndiv_impl(const bigint_word_t *u, bigint_word_t v, bigint_word_t v2);
