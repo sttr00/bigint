@@ -1,7 +1,8 @@
 TARGET=bigint-test
-CC=gcc
-LD=gcc
-CFLAGS="-Wall -Werror=implicit-function-declaration -I.."
+CC=cc
+LD=cc
+CPPFLAGS="-I.."
+CFLAGS="-Wall -Werror=implicit-function-declaration"
 LDFLAGS="-L../bigint -lrt"
 
 [ -z "$FEATURES" ] && FEATURES="debug"

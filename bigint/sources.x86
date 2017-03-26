@@ -1,8 +1,9 @@
 TARGET=libbigint
-CC=gcc
-LD=gcc
+CC=cc
+LD=cc
 AS=nasm
-CFLAGS="-m32 -Wall -Werror=implicit-function-declaration -I.."
+CPPFLAGS="-I.."
+CFLAGS="-m32 -Wall -Werror=implicit-function-declaration"
 ASFLAGS="-f elf32"
 LDFLAGS="-m32"
 

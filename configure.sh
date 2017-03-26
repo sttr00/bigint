@@ -123,28 +123,28 @@ parse_sources()
 
   # C source?
   if check_src_ext "$src_base" c ; then
-   cmd="\$(CC) -c \$(CPPFLAGS)${target_cppflags} \$(CFLAGS) \$< -o \$@"
+   cmd="\$(CC) -c \$(CPPFLAGS)${target_cppflags} \$(CFLAGS) $src -o \$@"
    tool='CC      '
    flags='.CFLAGS'
    get_obj_name "$src_noext" "$src"
    [ -n "$use_deps" ] && get_deps  
   # C++ source?
   elif check_src_ext "$src_base" cpp cxx c++ C ; then
-   cmd="\$(CXX) -c \$(CPPFLAGS)${target_cppflags} \$(CXXFLAGS) \$< -o \$@"
+   cmd="\$(CXX) -c \$(CPPFLAGS)${target_cppflags} \$(CXXFLAGS) $src -o \$@"
    tool='CXX     '
    flags='.CXXFLAGS'
    get_obj_name "$src_noext" "$src"
    [ -n "$use_deps" ] && get_deps
   # ASM + CPP source? 
   elif check_src_ext "$src_base" S ; then
-   cmd="cpp \$(CPPFLAGS)${target_cppflags} \$< | \$(AS) \$(ASFLAGS) -o \$@"
+   cmd="cpp \$(CPPFLAGS)${target_cppflags} $src | \$(AS) \$(ASFLAGS) -o \$@"
    tool='AS      '
    flags='.ASFLAGS'
    get_obj_name "$src_noext" "$src"
    [ -n "$use_deps" ] && get_deps
   # ASM source? 
   elif check_src_ext "$src_base" s asm ; then
-   cmd="\$(AS) \$(ASFLAGS) -o \$@ \$<"
+   cmd="\$(AS) \$(ASFLAGS) -o \$@ $src"
    tool='AS      '
    flags='.ASFLAGS'
    get_obj_name "$src_noext" "$src"
@@ -182,7 +182,7 @@ print_flags_rule()
  local tmpfile=$(TMPDIR=/tmp mktemp)
  local tempname=${tmpfile/\/tmp/$CONFIG}-$flags
  local output="$filename: $tempname
-\\tdiff --brief $filename $tempname >/dev/null 2>/dev/null; if [ \$\$? -eq 0 ]; then rm -f $tempname; else mv -f $tempname $filename; fi
+\\t-diff --brief $filename $tempname >/dev/null 2>/dev/null; if [ \$\$? -eq 0 ]; then rm -f $tempname; else mv -f $tempname $filename; fi
 
 $tempname:
 \\techo $contents > $tempname
@@ -362,7 +362,7 @@ for src in $uic4_sources ; do
   $QT_UIC $src -o $output
   check_target="$output"
   check_rule
-  [ -n "$create_rule" ] && echo -e "$output: $src\\n\\t$QT_UIC \$< -o \$@\\n" >> $OUTFILE
+  [ -n "$create_rule" ] && echo -e "$output: $src\\n\\t$QT_UIC $src -o \$@\\n" >> $OUTFILE
   echo $src
  fi
 done
@@ -376,8 +376,8 @@ for src in $sources ; do
   check_target="$src_noext"
   check_rule
   if [ -n "$create_rule" ]; then
-   echo -e "$src_noext.h: $src\\n\\t$QT_UIC \$< -o \$@\\n" >> $OUTFILE
-   echo -e "$src_noext.cpp: $src_noext.h\\n\\t$QT_UIC -impl \$< \$*.ui -o \$@\\n" >> $OUTFILE
+   echo -e "$src_noext.h: $src\\n\\t$QT_UIC $src -o \$@\\n" >> $OUTFILE
+   echo -e "$src_noext.cpp: $src_noext.h\\n\\t$QT_UIC -impl $src \$*.ui -o \$@\\n" >> $OUTFILE
   fi
   echo "$src_base"
   srcadd="$srcadd $src_noext.cpp"
@@ -418,7 +418,7 @@ for src in $moc_sources ; do
    echo -e -n "\\tcd $dir; " >> $OUTFILE
    echo -e "$tool $src_noext.$ext >${prefix}_$src_noext.cpp\\n" >> $OUTFILE
   else
-   echo -e "\\t$tool \$< >\$@\\n" >> $OUTFILE
+   echo -e "\\t$tool $src >\$@\\n" >> $OUTFILE
   fi
   moc_rm="$moc_rm $cpp_file"
  fi
@@ -482,7 +482,7 @@ done
 
 # clean rule
 echo -e "clean:\n\t@rm -f $all_objs $CONFIG/.*FLAGS $CONFIG/$BUILDLOG\n\t@rm -f $TARGETS" >> $OUTFILE
-echo -e "\t@if [ -d \"$CONFIG\" ]; then rmdir --ignore-fail-on-non-empty $CONFIG ; else true; fi" >> $OUTFILE
+echo -e "\t@if [ -d \"$CONFIG\" ]; then rmdir $CONFIG ; else true; fi" >> $OUTFILE
 if [ -n "$moc_rm" ]; then
  echo -e "\trm -f $moc_rm" >> $OUTFILE
 fi
