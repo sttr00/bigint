@@ -111,6 +111,7 @@ static __inline void bigint_set_buf(bigint_t num, bigint_word_t *buf, int capaci
 
 void bigint_destroy(bigint_t num)
 {
+ if (!num) return;
  if (num->flags & BIGINT_FLAG_OWN_BUFFER) _bigint_free(num->buf);
  free(num);
 }
