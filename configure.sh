@@ -65,6 +65,7 @@ get_deps()
  fi
  if [ ! -f "$src" ]; then
   echo "$src: File not found" >&2
+  rm -f ./$OUTFILE
   exit 1
  fi
  deps=$($DEPTOOL ${CPPFLAGS}${target_cppflags} -MM $src) 
