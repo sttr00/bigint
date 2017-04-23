@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <bigint/defs_alloca.h>
+#include <platform/endian_ex.h>
 #include "rand32.h"
 #include <stdio.h>
 #include <string.h>
@@ -93,7 +94,8 @@ bigint_t create_random(uint32_t seed, int bytes)
  int pos = 0;
  while (bytes - pos >= 4)
  {
-  *(uint32_t *) (buf + pos) = rand32(&seed);
+  uint32_t val = rand32(&seed);
+  *(uint32_t *) (buf + pos) = VALUE_LE32(val);
   pos += 4;
  }
  if (pos < bytes)
