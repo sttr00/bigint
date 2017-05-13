@@ -17,8 +17,13 @@ void bigint_destroy(bigint_t num);
 void bigint_shrink_to_fit(bigint_t num);
 
 int bigint_get_byte_count(const bigint_t num);
+int bigint_get_bit_count(const bigint_t num);
+
 int bigint_get_bytes_be(const bigint_t num, void *buf, int size);
 int bigint_get_bytes_le(const bigint_t num, void *buf, int size);
+
+void bigint_set_bytes_be(bigint_t num, const void *data, int size);
+void bigint_set_bytes_le(bigint_t num, const void *data, int size);
 
 void bigint_set_word(bigint_t res, bigint_word_t w);
 void bigint_set_sign(bigint_t num, int neg);
@@ -29,8 +34,6 @@ int bigint_cmp(const bigint_t a, const bigint_t b);
 int bigint_cmp_word(const bigint_t a, bigint_word_t w);
 int bigint_eq_word(const bigint_t a, bigint_word_t w);
 
-int bigint_get_byte_count(const bigint_t num);
-int bigint_get_bit_count(const bigint_t num);
 int bigint_get_trailing_zeros(const bigint_t num);
 bigint_word_t bigint_get_ls_word(const bigint_t num);
 

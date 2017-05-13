@@ -1,7 +1,8 @@
 #include "bigint.h"
 #include "defs_int.h"
+#include "defs_unaligned.h"
 #include "dispatch.h"
-#include "defs_alloca.h"
+#include <platform/alloca.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -799,124 +800,201 @@ int bigint_get_byte_count(const bigint_t num)
 
 int bigint_get_bytes_be(const bigint_t num, void *buf, int size)
 {
- int i, j, req_size, shift, bits;
- bigint_word_t w;
+ int i, out_size, max, bytes;
+ bigint_word_t w = num->buf[num->size-1];
  uint8_t *out = (uint8_t *) buf;
- i = 0;
- j = num->size-1;
- w = num->buf[j];
  if (!w)
  {
   if (size < 1) return -1;
   out[0] = 0;
   return 1;
  }
- bits = _bigint_w_clz(w);
- req_size = (num->size<<BIGINT_WORD_SHIFT) - (bits >> 3);
- if (req_size > size) return -1;
- for (shift = WORD_BITS - 8 - (bits & ~7u); shift >= 0; shift -= 8)
-  out[i++] = (w>>shift) & 0xFF;
- for (--j; j >= 0; --j)
+ out_size = (num->size << BIGINT_WORD_SHIFT) - (_bigint_w_clz(w) >> 3);
+ if (out_size > size) return -1;
+ bytes = out_size & (BIGINT_WORD_SIZE-1);
+ max = out_size >> BIGINT_WORD_SHIFT;
+ out += out_size;
+ for (i = 0; i < max; i++)
  {
-  w = num->buf[j];
-  for (shift = WORD_BITS - 8; shift >= 0; shift -= 8)
-   out[i++] = (w>>shift) & 0xFF;
+  out -= BIGINT_WORD_SIZE;
+  bigint_put_unaligned_be(out, num->buf[i]);
  }
- assert(i == req_size);
- return i;
+ while (bytes)
+ {
+  *(--out) = (uint8_t) w;
+  w >>= 8;
+  bytes--;
+ }
+ return out_size;
 }
 
 int bigint_get_bytes_le(const bigint_t num, void *buf, int size)
 {
- int i, j, req_size, shift, bits, max;
- bigint_word_t w, w0;
+ int i, out_size, max, bytes;
+ bigint_word_t w = num->buf[num->size-1];
  uint8_t *out = (uint8_t *) buf;
- i = 0;
- max = num->size-1;
- w = num->buf[max];
  if (!w)
  {
   if (size < 1) return -1;
   out[0] = 0;
   return 1;
  }
- bits = _bigint_w_clz(w);
- req_size = (num->size<<BIGINT_WORD_SHIFT) - (bits >> 3);
- if (req_size > size) return -1;
- for (j = 0; j < max; j++)
+ out_size = (num->size << BIGINT_WORD_SHIFT) - (_bigint_w_clz(w) >> 3);
+ if (out_size > size) return -1;
+ bytes = out_size & (BIGINT_WORD_SIZE-1);
+ max = out_size >> BIGINT_WORD_SHIFT;
+ for (i = 0; i < max; i++)
  {
-  w0 = num->buf[j];
-  for (shift = 0; shift < WORD_BITS; shift += 8)
-   out[i++] = (w0>>shift) & 0xFF;
+  bigint_put_unaligned_le(out, num->buf[i]);
+  out -= BIGINT_WORD_SIZE;
  }
- bits = WORD_BITS - (bits & ~7u);
- for (shift = 0; shift < bits; shift += 8)
-  out[i++] = (w>>shift) & 0xFF;
- assert(i == req_size);
- return i;
+ while (bytes)
+ {
+  *out++ = (uint8_t) w;
+  w >>= 8;
+  bytes--;
+ }
+ return out_size;
+}
+
+void bigint_set_bytes_be(bigint_t num, const void *data, int size)
+{
+ int i, start, nz_size, max, bytes, words;
+ const uint8_t *in = (const uint8_t *) data;
+ for (start = 0; start < size; start++)
+  if (in[start]) break;
+ if (start == size)
+ {
+  bigint_set_word(num, 0);
+  return;
+ }
+ nz_size = size - start;
+ words = (nz_size + BIGINT_WORD_SIZE-1) >> BIGINT_WORD_SHIFT;
+ bigint_ensure_space(num, words);
+ max = nz_size >> BIGINT_WORD_SHIFT;
+ bytes = nz_size & (BIGINT_WORD_SIZE-1); 
+ in += size;
+ for (i = 0; i < max; i++)
+ {
+  in -= BIGINT_WORD_SIZE;
+  num->buf[i] = bigint_get_unaligned_be(in);
+ }
+ if (bytes)
+ {
+  bigint_word_t w = 0;
+  in -= bytes;
+  while (bytes)
+  {
+   w = w << 8 | *in++;
+   bytes--;
+  }
+  num->buf[max] = w;
+ }
+ num->size = words;
+ num->neg = 0;
+}
+
+void bigint_set_bytes_le(bigint_t num, const void *data, int size)
+{
+ ;
+ int i, nz_size = size, max, bytes, words;
+ const uint8_t *in = (const uint8_t *) data;
+ while (nz_size)
+ {
+  if (in[nz_size-1]) break;
+  nz_size--;
+ }
+ if (!nz_size)
+ {
+  bigint_set_word(num, 0);
+  return;
+ }
+ words = (nz_size + BIGINT_WORD_SIZE-1) >> BIGINT_WORD_SHIFT;
+ bigint_ensure_space(num, words);
+ max = nz_size >> BIGINT_WORD_SHIFT;
+ bytes = nz_size & (BIGINT_WORD_SIZE-1);
+ for (i = 0; i < max; i++)
+ {
+  num->buf[i] = bigint_get_unaligned_le(in);
+  in += BIGINT_WORD_SIZE;
+ }
+ if (bytes)
+ {
+  bigint_word_t w = 0;
+  in += bytes;
+  while (bytes)
+  {
+   w = w << 8 | *(--in);
+   bytes--;
+  }
+  num->buf[max] = w;
+ }
+ num->size = words;
+ num->neg = 0;
 }
 
 bigint_t bigint_create_bytes_be(const void *data, int size)
 {
- bigint_word_t w;
  bigint_t res;
- int i, start, nz_size, pos, shift, words;
- const uint8_t *bytes = (const uint8_t *) data;
+ int i, start, nz_size, max, bytes;
+ const uint8_t *in = (const uint8_t *) data;
  for (start = 0; start < size; start++)
-  if (bytes[start]) break;
+  if (in[start]) break;
  if (start == size) return bigint_create_word(0);
  nz_size = size - start;
- nz_size = (nz_size + BIGINT_WORD_SIZE-1) & ~(BIGINT_WORD_SIZE-1);
- start = size - nz_size;
- if (start < 0) start = 0;
- words = nz_size >> BIGINT_WORD_SHIFT;
-
- res = bigint_create(words);
- pos = shift = 0;
- w = 0;
- for (i = size-1; i >= start; i--)
+ res = bigint_create((nz_size + BIGINT_WORD_SIZE-1) >> BIGINT_WORD_SHIFT);
+ max = nz_size >> BIGINT_WORD_SHIFT;
+ bytes = nz_size & (BIGINT_WORD_SIZE-1);
+ in += size;
+ for (i = 0; i < max; i++)
  {
-  w |= (bigint_word_t) bytes[i] << shift;
-  shift += 8;
-  if (shift == WORD_BITS)
-  {
-   res->buf[pos++] = w;
-   w = 0;
-   shift = 0;
-  }
+  in -= BIGINT_WORD_SIZE;
+  res->buf[i] = bigint_get_unaligned_be(in);
  }
- if (shift) res->buf[pos++] = w;
- assert(pos == words);
+ if (bytes)
+ {
+  bigint_word_t w = 0;
+  in -= bytes;
+  while (bytes)
+  {
+   w = w << 8 | *in++;
+   bytes--;
+  }
+  res->buf[max] = w;
+ }
  return res;
 }
 
 bigint_t bigint_create_bytes_le(const void *data, int size)
 {
- bigint_word_t w;
  bigint_t res;
- int i, end, pos, shift, words;
- const uint8_t *bytes = (const uint8_t *) data;
- for (end = size-1; end >= 0; end--)
-  if (bytes[end]) break;
- if (++end == 0) return bigint_create_word(0);
- words = (end + BIGINT_WORD_SIZE-1) >> BIGINT_WORD_SHIFT;
-
- res = bigint_create(words);
- pos = shift = 0;
- w = 0;
- for (i = 0; i < end; i++)
+ int i, nz_size = size, max, bytes;
+ const uint8_t *in = (const uint8_t *) data;
+ while (nz_size)
  {
-  w |= (bigint_word_t) bytes[i] << shift;
-  shift += 8;
-  if (shift == WORD_BITS)
-  {
-   res->buf[pos++] = w;
-   w = 0;
-   shift = 0;
-  }
+  if (in[nz_size-1]) break;
+  nz_size--;
  }
- if (shift) res->buf[pos++] = w;
- assert(pos == words);
+ if (!nz_size) return bigint_create_word(0);
+ res = bigint_create((nz_size + BIGINT_WORD_SIZE-1) >> BIGINT_WORD_SHIFT);
+ max = nz_size >> BIGINT_WORD_SHIFT;
+ bytes = nz_size & (BIGINT_WORD_SIZE-1);
+ for (i = 0; i < max; i++)
+ {
+  res->buf[i] = bigint_get_unaligned_le(in);
+  in += BIGINT_WORD_SIZE;
+ }
+ if (bytes)
+ {
+  bigint_word_t w = 0;
+  in += bytes;
+  while (bytes)
+  {
+   w = w << 8 | *(--in);
+   bytes--;
+  }
+  res->buf[max] = w;
+ }
  return res;
 }
 
