@@ -238,6 +238,20 @@ static __inline void bigint_set_size(bigint_t num, int size)
  num->size = size;
 }
 
+static __inline void bigint_move(bigint_t dest, bigint_t src)
+{
+ if (dest->flags & BIGINT_FLAG_OWN_BUFFER) _bigint_free(dest->buf); 
+ dest->buf = src->buf;
+ dest->size = src->size;
+ dest->capacity = src->capacity;
+ dest->neg = src->neg;
+ dest->flags = src->flags;
+ src->buf = NULL;
+ src->size = src->capacity = 0;
+ src->neg = 0;
+ src->flags = 0;
+}
+
 void bigint_add(bigint_t res, const bigint_t a, const bigint_t b)
 {
  int size, dsize, capacity;
@@ -608,22 +622,34 @@ void bigint_mmul(bigint_t res, const bigint_t a, const bigint_t b, const bigint_
 void bigint_mpow(bigint_t res, const bigint_t a, const bigint_t n, const bigint_t m)
 {
  int i;
+ bigint_t out = res;
+ bigint_t tmp = NULL;
  bigint_t d = bigint_create(a->size<<1); 
  bigint_copy(d, a);
- bigint_set_word(res, 1);
+ if (res == a || res == n || res == m)
+ {
+  tmp = bigint_create(0);
+  out = tmp;
+ }
+ bigint_set_word(out, 1);
  for (i=0; i<n->size; i++)
  {
   bigint_word_t w = n->buf[i];
   int count = WORD_BITS;
   while (count)
   {
-   if (w & 1) bigint_mmul(res, res, d, m);
+   if (w & 1) bigint_mmul(out, out, d, m);
    bigint_mmul(d, d, d, m);
    w >>= 1;
    count--;
   }
  }
  bigint_destroy(d);
+ if (tmp)
+ {
+  bigint_move(res, tmp);
+  bigint_destroy(tmp);
+ }
 }
 
 int bigint_get_bit_count(const bigint_t num)
