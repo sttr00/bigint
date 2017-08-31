@@ -413,8 +413,24 @@ void bigint_mul(bigint_t res, const bigint_t a, const bigint_t b)
  for (i = 1; i < bsize; i++)
   call_muladdw(out + i, abuf, bbuf[i], asize);
  if (res->buf != out) bigint_set_buf(res, out, size);
- bigint_set_size(res, size);
  res->neg = a->neg ^ b->neg;
+ bigint_set_size(res, size);
+}
+
+void bigint_mulw(bigint_t res, const bigint_t a, bigint_word_t w)
+{
+ int size = a->size + 1;
+ if (res == a)
+ {
+  bigint_word_t *out = _bigint_malloc(size);
+  call_mulw(out, a->buf, w, a->size);
+  bigint_set_buf(res, out, size);
+ } else
+ {
+  bigint_ensure_space(res, size);
+  call_mulw(res->buf, a->buf, w, a->size);
+ }
+ bigint_set_size(res, size);
 }
 
 void bigint_copy(bigint_t res, const bigint_t num)
@@ -488,12 +504,12 @@ void bigint_divmod(bigint_t q, bigint_t r, const bigint_t a, const bigint_t b)
   for (i = a->size-1; i >= 0; i--)
    _bigint_dw_ndiv(rbuf[i], rbuf[i+1], v, qbuf[i], rbuf[i]);
   if (r->buf != rbuf) bigint_set_buf(r, rbuf, rcap);
-  r->neg = b->neg;
   r->buf[0] >>= bits;
   r->size = 1;
+  if (r->buf[0]) r->neg = a->neg; else r->neg = 0;
   if (q->buf != qbuf) bigint_set_buf(q, qbuf, qcap);
-  bigint_set_size(q, qcap);
   q->neg = a->neg ^ b->neg;
+  bigint_set_size(q, qcap);
   return;
  }
  if (bits)
@@ -524,11 +540,11 @@ void bigint_divmod(bigint_t q, bigint_t r, const bigint_t a, const bigint_t b)
  }
  if (bits) call_shr(rbuf, rbuf, bits, b->size);
  if (r->buf != rbuf) bigint_set_buf(r, rbuf, rcap);
+ r->neg = a->neg;
  bigint_set_size(r, b->size);
- r->neg = b->neg;
  if (q->buf != qbuf) bigint_set_buf(q, qbuf, qcap);
- bigint_set_size(q, qcap);
  q->neg = a->neg ^ b->neg;
+ bigint_set_size(q, qcap);
  if (btmp != b->buf) _bigint_free_temp(btmp, b->size);
 }
 
@@ -569,9 +585,9 @@ void bigint_mod(bigint_t r, const bigint_t a, const bigint_t b)
   for (i = a->size-1; i >= 0; i--)
    _bigint_dw_ndiv(rbuf[i], rbuf[i+1], v, q, rbuf[i]);
   if (r->buf != rbuf) bigint_set_buf(r, rbuf, rcap);
-  r->neg = b->neg;
   r->buf[0] >>= bits;
   r->size = 1;
+  if (r->buf[0]) r->neg = a->neg; else r->neg = 0;
   return;
  }
  if (bits)
@@ -599,8 +615,8 @@ void bigint_mod(bigint_t r, const bigint_t a, const bigint_t b)
  }
  if (bits) call_shr(rbuf, rbuf, bits, b->size);
  if (r->buf != rbuf) bigint_set_buf(r, rbuf, rcap);
+ r->neg = a->neg;
  bigint_set_size(r, b->size);
- r->neg = b->neg;
  if (btmp != b->buf) _bigint_free_temp(btmp, b->size);
 }
 
@@ -616,6 +632,20 @@ void bigint_mod(bigint_t r, const bigint_t a, const bigint_t b)
 void bigint_mmul(bigint_t res, const bigint_t a, const bigint_t b, const bigint_t m)
 {
  bigint_mul(res, a, b);
+ bigint_mod(res, res, m);
+ if (res->neg) bigint_add(res, res, m);
+}
+
+void bigint_madd(bigint_t res, const bigint_t a, const bigint_t b, const bigint_t m)
+{
+ bigint_add(res, a, b);
+ bigint_mod(res, res, m);
+ if (res->neg) bigint_add(res, res, m);
+}
+
+void bigint_msub(bigint_t res, const bigint_t a, const bigint_t b, const bigint_t m)
+{
+ bigint_sub(res, a, b);
  bigint_mod(res, res, m);
  if (res->neg) bigint_add(res, res, m);
 }
@@ -787,6 +817,11 @@ int bigint_minv(bigint_t res, bigint_t a, bigint_t m)
  bigint_destroy(q);
  bigint_destroy(tmp);
  return rv;
+}
+
+int bigint_get_word_count(const bigint_t num)
+{
+ return num->size;
 }
 
 int bigint_get_byte_count(const bigint_t num)
