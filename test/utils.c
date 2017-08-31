@@ -1,5 +1,5 @@
 #include "utils.h"
-#include <bigint/defs_alloca.h>
+#include <platform/alloca.h>
 #include <platform/endian_ex.h>
 #include "rand32.h"
 #include <stdio.h>
