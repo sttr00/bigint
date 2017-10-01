@@ -186,10 +186,8 @@ int bigint_cmp_abs(const bigint_t a, const bigint_t b)
  if (a->size > b->size) return 1;
  if (a->size < b->size) return -1;
  for (i = a->size-1; i >= 0; i--)
- {
-  if (a->buf[i] > b->buf[i]) return 1;
-  if (a->buf[i] < b->buf[i]) return -1;
- }
+  if (a->buf[i] != b->buf[i])
+   return a->buf[i] > b->buf[i]? 1 : -1;
  return 0;
 }
 
@@ -197,7 +195,7 @@ int bigint_cmp(const bigint_t a, const bigint_t b)
 {
  if (a->neg)
  {
-  if (b->neg) return -bigint_cmp_abs(a, b);
+  if (b->neg) return bigint_cmp_abs(b, a);
   return -1;
  }
  if (b->neg) return 1;
@@ -563,9 +561,14 @@ void bigint_mod(bigint_t r, const bigint_t a, const bigint_t b)
  assert(v);
  bits = _bigint_w_clz(v);
  rcap = a->size + 1;
- if (r == a || r == b)
+ if (r == b)
  {
   rbuf = _bigint_malloc(rcap);
+ } else
+ if (r == a)
+ {
+  if (a->capacity >= rcap) rbuf = r->buf;
+   else rbuf = _bigint_malloc(rcap);
  } else
  {
   bigint_ensure_space(r, rcap);
@@ -620,15 +623,6 @@ void bigint_mod(bigint_t r, const bigint_t a, const bigint_t b)
  if (btmp != b->buf) _bigint_free_temp(btmp, b->size);
 }
 
-#if 0
-void bigint_mod(bigint_t r, const bigint_t a, const bigint_t b)
-{
- bigint_t q = bigint_create(0);
- bigint_divmod(q, r, a, b);
- bigint_destroy(q);
-}
-#endif
-
 void bigint_mmul(bigint_t res, const bigint_t a, const bigint_t b, const bigint_t m)
 {
  bigint_mul(res, a, b);
@@ -652,35 +646,44 @@ void bigint_msub(bigint_t res, const bigint_t a, const bigint_t b, const bigint_
 
 void bigint_mpow(bigint_t res, const bigint_t a, const bigint_t n, const bigint_t m)
 {
- int i;
- bigint_t out = res;
- bigint_t tmp = NULL;
- bigint_t d = bigint_create(a->size<<1); 
- bigint_copy(d, a);
- if (res == a || res == n || res == m)
+ int i, first_alloc;
+ int req_size = 1 + (a->size<<1);
+ int d_in = 4, d_out = 2;
+ int p_in = 0;
+ bigint_t v[5];
+ if (res != a && res != n && res != m)
  {
-  tmp = bigint_create(0);
-  out = tmp;
+  bigint_ensure_space(res, req_size);
+  v[0] = res;
+  first_alloc = 1;
+ } else
+ {
+  v[0] = bigint_create(req_size);
+  first_alloc = 0;
  }
- bigint_set_word(out, 1);
+ for (i=1; i<4; i++) v[i] = bigint_create(req_size);
+ v[4] = a;
+ bigint_set_word(v[0], 1);
  for (i=0; i<n->size; i++)
  {
   bigint_word_t w = n->buf[i];
   int count = WORD_BITS;
   while (count)
   {
-   if (w & 1) bigint_mmul(out, out, d, m);
-   bigint_mmul(d, d, d, m);
+   if (w & 1)
+   {
+    bigint_mmul(v[p_in^1], v[p_in], v[d_in], m);
+    p_in ^= 1;
+   }
+   bigint_mmul(v[d_out], v[d_in], v[d_in], m);
+   d_in = d_out;
+   d_out = d_in ^ 1;
    w >>= 1;
    count--;
   }
  }
- bigint_destroy(d);
- if (tmp)
- {
-  bigint_move(res, tmp);
-  bigint_destroy(tmp);
- }
+ if (res != v[p_in]) bigint_move(res, v[p_in]);
+ for (i=first_alloc; i<4; i++) bigint_destroy(v[i]);
 }
 
 int bigint_get_bit_count(const bigint_t num)
