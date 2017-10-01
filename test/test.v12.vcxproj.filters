@@ -36,6 +36,9 @@
     <ClCompile Include="benchmark.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="benchmark_pow.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rand32.h">

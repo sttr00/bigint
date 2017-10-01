@@ -7,6 +7,7 @@ extern void run_test_base();
 extern void run_test_bigint();
 extern void benchmark_mul();
 extern void benchmark_div();
+extern void benchmark_pow();
 
 enum
 {
@@ -14,6 +15,7 @@ enum
  MODE_TEST_BIGINT,
  MODE_BENCHMARK_MUL,
  MODE_BENCHMARK_DIV,
+ MODE_BENCHMARK_POW,
  MODE_CPU_INFO
 };
 
@@ -28,7 +30,7 @@ int main(int argc, char *argv[])
   printf("Usage: %s [ options ] \n"
          "options:\n"
           "   -t { base | bigint }   run test\n"
-          "   -b { mul | div }       run benchmark\n"
+          "   -b { mul | div | pow } run benchmark\n"
           "   -cpu                   print cpu features and exit\n"
           "   -x feature             disable cpu feature\n\n", argv[0]);
   return 2;
@@ -57,7 +59,8 @@ int main(int argc, char *argv[])
    if (i == last_arg) goto arg_error;
    ++i;
    if (!strcmp(argv[i], "mul")) mode = MODE_BENCHMARK_MUL; else
-   if (!strcmp(argv[i], "div")) mode = MODE_BENCHMARK_DIV;
+   if (!strcmp(argv[i], "div")) mode = MODE_BENCHMARK_DIV; else
+   if (!strcmp(argv[i], "pow")) mode = MODE_BENCHMARK_POW;
    else
    {
     fprintf(stderr, "%s: unknown benchmark\n", argv[i]);
@@ -102,6 +105,10 @@ int main(int argc, char *argv[])
 
   case MODE_BENCHMARK_DIV:
    benchmark_div();
+   break;
+
+  case MODE_BENCHMARK_POW:
+   benchmark_pow();
    break;
 
   case MODE_CPU_INFO:

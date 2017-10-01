@@ -29,6 +29,7 @@
   <ItemGroup>
     <ClCompile Include="..\cpuid\cpu_features.c" />
     <ClCompile Include="benchmark.c" />
+    <ClCompile Include="benchmark_pow.c" />
     <ClCompile Include="cpu_utils.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="rand32.c" />
