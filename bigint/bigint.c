@@ -165,7 +165,7 @@ void bigint_shrink_to_fit(bigint_t num)
    if (num->flags & BIGINT_FLAG_OWN_BUFFER) _bigint_free(num->buf);
    num->buf = new_buf;
    num->capacity = num->size;
-   num->flags= BIGINT_FLAG_OWN_BUFFER;
+   num->flags = BIGINT_FLAG_OWN_BUFFER;
   }
  }
 }
@@ -428,6 +428,7 @@ void bigint_mulw(bigint_t res, const bigint_t a, bigint_word_t w)
   bigint_ensure_space(res, size);
   call_mulw(res->buf, a->buf, w, a->size);
  }
+ res->neg = a->neg;
  bigint_set_size(res, size);
 }
 
@@ -1063,6 +1064,7 @@ void bigint_rshift(bigint_t res, const bigint_t num, int bits)
   if (res != num) bigint_ensure_space(res, size);
   call_shr(res->buf, num->buf, bits, size);
  }
+ res->neg = num->neg;
  bigint_set_size(res, size);
 }
 
@@ -1086,5 +1088,14 @@ void bigint_lshift(bigint_t res, const bigint_t num, int bits)
   for (i = 0; i < words; i++) out[i] = 0;
  } else out[num->size] = call_shl(out, num->buf, bits, num->size);
  if (res->buf != out) bigint_set_buf(res, out, capacity);
+ res->neg = num->neg;
  bigint_set_size(res, num->size + words + 1); 
+}
+
+int bigint_get_bit(const bigint_t num, unsigned index)
+{
+ unsigned bit = index & (WORD_BITS-1);
+ index >>= WORD_BITS_LOG;
+ if ((int) index >= num->size) return 0;
+ return (num->buf[index] >> bit) & 1;
 }

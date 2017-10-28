@@ -58,6 +58,8 @@ int bigint_minv(bigint_t res, bigint_t a, bigint_t m);
 void bigint_rshift(bigint_t res, const bigint_t num, int bits);
 void bigint_lshift(bigint_t res, const bigint_t num, int bits);
 
+int bigint_get_bit(const bigint_t num, unsigned index);
+
 #ifdef __cplusplus
 }
 #endif
