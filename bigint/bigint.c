@@ -263,7 +263,7 @@ void bigint_add(bigint_t res, const bigint_t a, const bigint_t b)
    capacity = size + 1;
    if (res == a || res == b)
    {
-    out = _bigint_malloc(capacity);
+    out = bigint_ensure_space_const(res, &capacity);
    } else
    {
     bigint_ensure_space(res, capacity);
@@ -279,7 +279,7 @@ void bigint_add(bigint_t res, const bigint_t a, const bigint_t b)
    capacity = size + 1;
    if (res == a || res == b)
    {
-    out = _bigint_malloc(capacity);
+    out = bigint_ensure_space_const(res, &capacity);
    } else
    {
     bigint_ensure_space(res, capacity);
@@ -300,7 +300,7 @@ void bigint_add(bigint_t res, const bigint_t a, const bigint_t b)
   capacity = size = a->size;
   if (res == a || res == b)
   {
-   out = _bigint_malloc(capacity);
+   out = bigint_ensure_space_const(res, &capacity);
   } else
   {
    bigint_ensure_space(res, capacity);
@@ -316,7 +316,7 @@ void bigint_add(bigint_t res, const bigint_t a, const bigint_t b)
   capacity = size = b->size;
   if (res == a || res == b)
   {
-   out = _bigint_malloc(capacity);
+   out = bigint_ensure_space_const(res, &capacity);
   } else
   {
    bigint_ensure_space(res, capacity);
