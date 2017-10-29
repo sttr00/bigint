@@ -344,13 +344,26 @@ void bigint_sub(bigint_t res, bigint_t a, bigint_t b)
 void bigint_addw(bigint_t res, const bigint_t a, bigint_word_t w)
 {
  bigint_word_t c, *out;
- int size, capacity;
+ int size = a->size, capacity;
  if (a->neg)
  {
-  bigint_subw(res, a, w);
+  if (size == 1 && a->buf[0] <= w)
+  {
+   w -= a->buf[0];
+   bigint_ensure_space(res, 1);
+   res->buf[0] = w;
+   res->size = 1;
+   res->neg = 0;
+   return;
+  }
+  capacity = size;
+  out = bigint_ensure_space_const(res, &capacity);
+  call_subw(out, a->buf, w, size);
+  if (res->buf != out) bigint_set_buf(res, out, capacity);
+  res->neg = 1;
+  bigint_set_size(res, size);
   return;
  }
- size = a->size;
  capacity = size + 1;
  out = bigint_ensure_space_const(res, &capacity);
  c = call_addw(out, a->buf, w, size);
@@ -362,22 +375,26 @@ void bigint_addw(bigint_t res, const bigint_t a, bigint_word_t w)
 
 void bigint_subw(bigint_t res, const bigint_t a, bigint_word_t w)
 {
- bigint_word_t *out;
- int size, capacity;
+ bigint_word_t c, *out;
+ int size = a->size, capacity;
  if (a->neg)
  {
-  bigint_addw(res, a, w);
+  capacity = size + 1;
+  out = bigint_ensure_space_const(res, &capacity);
+  c = call_addw(out, a->buf, w, size);
+  if (c) out[size++] = c;
+  if (res->buf != out) bigint_set_buf(res, out, capacity);
+  res->size = size;
   res->neg = 1;
   return;
  }
- size = a->size;
  if (size == 1 && a->buf[0] <= w)
  {
   w -= a->buf[0];
   bigint_ensure_space(res, 1);
   res->buf[0] = w;
   res->size = 1;
-  res->neg = 1;
+  res->neg = w? 1 : 0;
   return;
  }
  capacity = size;
