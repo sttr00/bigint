@@ -902,7 +902,7 @@ int bigint_get_bytes_le(const bigint_t num, void *buf, int size)
  for (i = 0; i < max; i++)
  {
   bigint_put_unaligned_le(out, num->buf[i]);
-  out -= BIGINT_WORD_SIZE;
+  out += BIGINT_WORD_SIZE;
  }
  while (bytes)
  {
