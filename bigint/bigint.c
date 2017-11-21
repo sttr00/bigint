@@ -237,7 +237,7 @@ static __inline void bigint_set_size(bigint_t num, int size)
  num->size = size;
 }
 
-static __inline void bigint_move(bigint_t dest, bigint_t src)
+void bigint_move(bigint_t dest, bigint_t src)
 {
  if (dest->flags & BIGINT_FLAG_OWN_BUFFER) _bigint_free(dest->buf); 
  dest->buf = src->buf;

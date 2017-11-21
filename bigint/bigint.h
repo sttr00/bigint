@@ -15,6 +15,7 @@ bigint_t bigint_create_bytes_be(const void *data, int size);
 bigint_t bigint_create_bytes_le(const void *data, int size);
 void bigint_destroy(bigint_t num);
 void bigint_copy(bigint_t res, const bigint_t num);
+void bigint_move(bigint_t res, bigint_t num);
 void bigint_shrink_to_fit(bigint_t num);
 
 int bigint_get_word_count(const bigint_t num);
