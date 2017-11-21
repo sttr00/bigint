@@ -825,6 +825,7 @@ int bigint_minv(bigint_t res, bigint_t a, bigint_t m)
  }
  if (d2->size == 1 && d2->buf[0] == 1)
  {
+  if (d2->neg) utmp[index]->neg ^= 1;
   rv = 1;
   if (utmp[index]->neg)
    bigint_add(res, utmp[index], m); else
