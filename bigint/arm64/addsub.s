@@ -11,7 +11,6 @@
 
 _bigint_add:
  mov     x4, xzr
- mov     x7, xzr
 
 loop1:
  adds    x6, x4, #-1
@@ -19,7 +18,7 @@ loop1:
  ldr     x6, [x2], #8
  adcs    x5, x5, x6
  str     x5, [x0], #8
- adc     x4, x7, x7
+ adc     x4, xzr, xzr
  subs    w3, w3, #1
  b.ne    loop1
 
@@ -44,7 +43,7 @@ _bigint_addw:
  b.cc    copy1
 
  subs    w3, w3, #1
- beq     fin1
+ b.eq    fin1
 loop2:
  ldr     x4, [x1], #8
  adds    x4, x4, #1
@@ -64,7 +63,7 @@ loop3:
  ldr     x4, [x1], #8
  subs    w3, w3, #1
  str     x4, [x0], #8
- b.ne    loop3 
+ b.ne    loop3
 
 fin2:
  mov     x0, xzr
@@ -83,7 +82,6 @@ fin2:
 
 _bigint_sub:
  mov     x4, #1
- mov     x7, xzr
 
 loop4:
  adds    x6, x4, #-1
@@ -91,7 +89,7 @@ loop4:
  ldr     x6, [x2], #8
  sbcs    x5, x5, x6
  str     x5, [x0], #8
- adc     x4, x7, x7
+ adc     x4, xzr, xzr
  subs    w3, w3, #1
  b.ne    loop4
 
