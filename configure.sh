@@ -441,8 +441,10 @@ use_sources="$sources_nocheck"
 unset use_deps
 parse_sources
 
+ldsrc="$objs"
+[ -n "$LIBS" ] && ldsrc="$ldsrc $LIBS"
 if [ "$target_output" = "static-lib" ]; then
- cmd="\$(AR) cr \$@ $objs"
+ cmd="\$(AR) cr \$@ $ldsrc"
  tool='AR      '
  flags=''
  install_perm=0644
@@ -454,13 +456,13 @@ else
    [ -n "${!name}" ] && flags="$flags $CONFIG/.$name"
   done
  fi
- cmd="\$(LD) $objs \$(LDFLAGS)${target_ldflags} -o \$@"
+ cmd="\$(LD) $ldsrc \$(LDFLAGS)${target_ldflags} -o \$@"
  tool='LINK    '
  install_perm=0755
 fi
 
 cmd="@echo \"  $tool$target\"\n\t@echo '$cmd' >> $CONFIG/$BUILDLOG\n\t@$cmd"
-final_rule="$target: $CONFIG $objs $flags"
+final_rule="$target: $CONFIG $ldsrc $flags"
 [ -n "$PRELINK_CMD" ] && final_rule="$final_rule\n\t$PRELINK_CMD"
 echo -e "$final_rule\n\t$cmd\n" >> $OUTFILE
 

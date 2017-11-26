@@ -3,7 +3,7 @@ CC=cc
 LD=cc
 CPPFLAGS="-I.."
 CFLAGS="-Wall -Werror=implicit-function-declaration"
-LDFLAGS="-L../bigint -lrt"
+LDFLAGS="-lrt"
 
 [ -z "$FEATURES" ] && FEATURES="debug"
 
@@ -21,10 +21,10 @@ utils.c
 unset use_debug use_release
 
 CFLAGS_RELEASE="-O2 -fomit-frame-pointer"
-LDFLAGS_RELEASE="-lbigint"
+LDFLAGS_RELEASE=""
 
 CFLAGS_DEBUG="-g"
-LDFLAGS_DEBUG="-g -lbigint-dbg"
+LDFLAGS_DEBUG="-g"
 
 for feat in $FEATURES ; do
  case $feat in
@@ -48,6 +48,7 @@ if [ -n "$use_debug" ]; then
  CONFIG="DEBUG"
  CFLAGS="$CFLAGS $CFLAGS_DEBUG"
  LDFLAGS="$LDFLAGS $LDFLAGS_DEBUG"
+ LIBS="../bigint/libbigint-dbg.a"
  TARGET="$TARGET-dbg"
 else
  if [ -z "$use_release" ]; then
@@ -57,6 +58,7 @@ else
  CONFIG="RELEASE"
  CFLAGS="$CFLAGS $CFLAGS_RELEASE"
  LDFLAGS="$LDFLAGS $LDFLAGS_RELEASE"
+ LIBS="../bigint/libbigint.a"
 fi
 
 unset feat use_debug use_release use_generic
