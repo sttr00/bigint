@@ -1,20 +1,18 @@
 #ifndef __bigint_defs_arch_h__
 #define __bigint_defs_arch_h__
 
+#ifndef BIGINT_GENERIC_ARCH
+#include <platform/arch.h>
+#endif
+
 #include "defs_word.h"
 
 /* GCC */
 #ifdef __GNUC__
 
-#if defined(__i386__)
-#define ARCH_X86
-#elif defined(__amd64__)
-#define ARCH_X86_64
-#endif
-
 #if defined(__GNUC_MINOR__) && (__GNUC__*256 + __GNUC_MINOR__ >= 0x303)
 
-#ifdef ENV_64BIT
+#if BIGINT_WORD_SIZE == 8
 #define _bigint_w_clz __builtin_clzl
 #define _bigint_w_ctz __builtin_ctzl
 #else
@@ -29,7 +27,7 @@
 #ifndef _bigint_w_clz
 #define _bigint_w_clz _bigint_w_clz_impl
 
-static __inline int _bigint_w_clz_impl(bigint_word_t val) 
+static __inline int _bigint_w_clz_impl(bigint_word_t val)
 {
  bigint_word_t res;
  #ifdef ARCH_X86
@@ -47,7 +45,7 @@ static __inline int _bigint_w_clz_impl(bigint_word_t val)
 #ifndef _bigint_w_ctz
 #define _bigint_w_ctz _bigint_w_ctz_impl
 
-static __inline int _bigint_w_ctz_impl(bigint_word_t val) 
+static __inline int _bigint_w_ctz_impl(bigint_word_t val)
 {
  bigint_word_t res;
  #ifdef ARCH_X86
@@ -83,12 +81,16 @@ extern bigint_word_t _bigint_td_ndiv_impl(const bigint_word_t *u, bigint_word_t 
 #define _bigint_td_ndiv _bigint_td_ndiv_impl
 #endif /* BIGINT_DISABLE_ASM */
 
-#elif defined(__arm__)
+#elif defined(ARCH_ARM) || defined(ARCH_ARM64)
 
-#define ARCH_ARM
-
+#ifdef ARCH_ARM
 #define _bigint_ww_mul(a, b, res_lo, res_hi) \
  asm ("umull %0, %1, %2, %3\n\t" : "=r"(res_lo), "=r"(res_hi) : "%r"(a), "r"(b))
+#else /* ARM64 */
+#define _bigint_ww_mul(a, b, res_lo, res_hi) \
+ asm ("mul %0, %2, %3\n\t" \
+      "umulh %1, %2, %3\n\t" : "=&r"(res_lo), "=r"(res_hi) : "%r"(a), "r"(b))
+#endif
 
 #ifndef BIGINT_DISABLE_ASM
 extern bigint_word_t _bigint_dw_ndiv_impl(bigint_word_t a_lo, bigint_word_t a_hi, bigint_word_t b, bigint_word_t *r);
@@ -104,12 +106,6 @@ extern bigint_word_t _bigint_td_ndiv_impl(const bigint_word_t *u, bigint_word_t 
 
 #elif defined(_MSC_VER)
 
-#if defined(_M_IX86)
-#define ARCH_X86
-#elif defined(_M_X64)
-#define ARCH_X86_64
-#endif
-
 #include <intrin.h>
 
 #define _bigint_w_clz _bigint_w_clz_impl
@@ -118,7 +114,7 @@ extern bigint_word_t _bigint_td_ndiv_impl(const bigint_word_t *u, bigint_word_t 
 static __forceinline int _bigint_w_clz_impl(bigint_word_t val)
 {
  unsigned long pos;
- #ifdef ENV_64BIT
+ #if BIGINT_WORD_SIZE == 8
  _BitScanReverse64(&pos, val);
  return pos ^ 63;
  #else
@@ -130,7 +126,7 @@ static __forceinline int _bigint_w_clz_impl(bigint_word_t val)
 static __forceinline int _bigint_w_ctz_impl(bigint_word_t val)
 {
  unsigned long pos;
- #ifdef ENV_64BIT
+ #if BIGINT_WORD_SIZE == 8
  _BitScanForward64
  #else
  _BitScanForward

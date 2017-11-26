@@ -9,6 +9,7 @@ LDFLAGS="-L../bigint -lrt"
 
 SOURCES="
 benchmark.c
+benchmark_pow.c
 cpu_utils.c
 main.c
 rand32.c
@@ -32,6 +33,9 @@ for feat in $FEATURES ; do
     ;;
   "release")
     use_release=1
+    ;;
+  "w32")
+    CPPFLAGS="$CPPFLAGS -DBIGINT_WORD32 -DBIGINT_GENERIC_ARCH"
     ;;
   *)
     echo "Unknown feature $feat"

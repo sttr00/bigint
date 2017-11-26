@@ -3,7 +3,7 @@
 int _bigint_w_clz_c(bigint_word_t val)
 {
  int result = 1;
-#ifdef ENV_64BIT
+#if BIGINT_WORD_SIZE == 8
 #define HW 32
  if (!(val >> 32)) { result += 32; val <<= 32; }
 #else
@@ -19,7 +19,7 @@ int _bigint_w_clz_c(bigint_word_t val)
 int _bigint_w_ctz_c(bigint_word_t val)
 {
  int result = 1;
-#ifdef ENV_64BIT
+#if BIGINT_WORD_SIZE == 8
  if (!(val & 0xFFFFFFFF)) { result += 32; val >>= 32; }
 #endif
  if (!(val & 0x0000FFFF)) { result += 16; val >>= 16; }

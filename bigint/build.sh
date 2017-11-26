@@ -8,8 +8,10 @@ elif [ "$arch" = "x86_64" -o "$arch" = "amd64" ]; then
  arch=x86_64
 elif [ "${arch:0:3}" = "arm" ]; then
  arch=arm
+elif [ "$arch" = "aarch64" ]; then
+ arch=arm64
 else
- echo 'Warning: Using detect cpu arch' >&2 
+ echo 'Warning: Unable to detect cpu arch' >&2
  arch=generic
 fi
 

@@ -1,13 +1,26 @@
 TARGET=libbigint
 CC=cc
 LD=cc
-CPPFLAGS="-I.. -DBIGINT_DISABLE_ASM -DBIGINT_GENERIC_ARCH"
+AS=as
+CPPFLAGS="-I.."
 CFLAGS="-Wall -Werror=implicit-function-declaration"
 
 [ -z "$FEATURES" ] && FEATURES="debug"
 
 SOURCES="
 bigint.c
+dispatch.c
+"
+
+src_asm="
+arm64/addsub.s
+arm64/base.s
+arm64/div.s
+arm64/mul.s
+arm64/shift.s
+"
+
+src_c="
 generic/addsub.c
 generic/base.c
 generic/bits.c
@@ -16,7 +29,7 @@ generic/mul.c
 generic/shift.c
 "
 
-unset use_debug use_release
+unset use_debug use_release use_generic
 
 CFLAGS_RELEASE="-O2 -fomit-frame-pointer"
 LDFLAGS_RELEASE=""
@@ -32,8 +45,11 @@ for feat in $FEATURES ; do
   "release")
     use_release=1
     ;;
-  "w32")
-    CPPFLAGS="$CPPFLAGS -DBIGINT_WORD32"
+  "generic")
+    use_generic=1
+    ;;
+  "stdisp")
+    CPPFLAGS="$CPPFLAGS -DBIGINT_STATIC_DISPATCH"
     ;;
   *)
     echo "Unknown feature $feat"
@@ -59,7 +75,14 @@ else
  CPPFLAGS="$CPPFLAGS -DNDEBUG"
 fi
 
-unset feat
-unset use_debug use_release
+if [ -z "$use_generic" ]; then
+ SOURCES="$SOURCES $src_asm"
+else
+ SOURCES="$SOURCES $src_c"
+ CPPFLAGS="$CPPFLAGS -DBIGINT_DISABLE_ASM"
+fi
+
+unset feat src_asm src_c
+unset use_debug use_release use_generic
 
 TARGET="$TARGET.a"
