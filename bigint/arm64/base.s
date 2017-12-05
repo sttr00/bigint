@@ -10,45 +10,44 @@
 .hidden _bigint_dw_ndiv_impl
 
 _bigint_dw_ndiv_impl:
- mov     x13, 0xFFFFFFFF
- lsr     x5, x2, #32  /* x5 = divisor halfword */
- udiv    x4, x1, x5
- cmp     x4, x13
- csel    x4, x13, x4, hi
- lsl     x4, x4, #32  /* x4 = q^ */
- mov     x10, #0x100000000
- mul     x6, x4, x2
- umulh   x7, x4, x2   /* <x7, x6> = b*q^ */
-
-loop1:
- subs    x8, x0, x6
- sbcs    x9, x1, x7
- b.cs    next
- sub     x4, x4, x10
- lsr     x11, x2, #32
- subs    x6, x6, x2, lsl #32
- sbc     x7, x7, x11
- b       loop1
-
-next:
- lsl     x11, x9, #32
- orr     x11, x11, x8, lsr #32
- udiv    x10, x11, x5  /* x10 = lower half of the quotient */
- cmp     x10, x13
- csel    x10, x13, x10, hi
- mul     x6, x10, x2
- umulh   x7, x10, x2
-
-loop2:
- subs    x1, x8, x6
- sbcs    xzr, x9, x7
- b.cs    fin
+ lsr     x5, x2, #32  /* x5 = b1 */
+ mov     w7, w2       /* x7 = b0 */
+ udiv    x4, x1, x5   /* x4 = q1 */
+ mul     x6, x4, x5
+ sub     x6, x1, x6   /* x6 = r */
+ mul     x8, x4, x7
+ lsr     x9, x0, #32
+ orr     x9, x9, x6, lsl #32 /* x9 = r*B + a1 */
+ cmp     x9, x8
+ b.hs    skip1
+ sub     x4, x4, #1
+ adds    x9, x9, x2
+ b.cs    skip1
+ cmp     x9, x8
+ b.hs    skip1
+ sub     x4, x4, #1
+ add     x9, x9, x2
+skip1:
+ sub     x9, x9, x8
+ /* second halfword */
+ udiv    x10, x9, x5  /* x10 = q0 */
+ mul     x6, x10, x5
+ sub     x6, x9, x6
+ mul     x8, x10, x7
+ mov     w11, w0
+ orr     x11, x11, x6, lsl #32
+ cmp     x11, x8
+ b.hs    skip2
  sub     x10, x10, #1
- subs    x6, x6, x2
- sbc     x7, x7, xzr
- b       loop2
-
-fin:
- str     x1, [x3]
- orr     x0, x10, x4
+ adds    x11, x11, x2
+ b.cs    skip2
+ cmp     x11, x8
+ b.hs    skip2
+ sub     x10, x10, #1
+ add     x11, x11, x2
+skip2:
+ sub     x11, x11, x8
+ lsl     x0, x4, #32
+ orr     x0, x0, x10
+ str     x11, [x3]
  ret

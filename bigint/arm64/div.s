@@ -13,48 +13,45 @@ _bigint_td_ndiv_impl:
  ldr     x5, [x0, #16]
  cmp     x5, x1
  b.hs    overflow
- lsr     x6, x1, #32   /* x6 = divisor halfword */
- cmp     x6, x5, lsr #32
- b.ne    div1
- mov     x0, #0xFFFFFFFF00000000
- b       div2
-div1:
- udiv    x0, x5, x6
- lsl     x0, x0, #32   /* x0 = q^ */
-div2:
- mov     x10, #0x100000000
- mul     x7, x0, x1
- umulh   x12, x0, x1   /* <x12, x7> = b*q^ */
 
-loop1:
- subs    x8, x4, x7
- sbcs    x9, x5, x12
- b.cs    next
- sub     x0, x0, x10
- lsr     x11, x1, #32
- subs    x7, x7, x1, lsl #32
- sbc     x12, x12, x11
- b       loop1
-
-next:
- lsl     x11, x9, #32
- orr     x11, x11, x8, lsr #32
- udiv    x10, x11, x6  /* x10 = lower half of the quotient */
- mul     x7, x10, x1
- umulh   x12, x10, x1
-
-loop2:
- subs    x5, x8, x7
- sbcs    xzr, x9, x12
- b.cs    div_done
- sub     x10, x10, #1
- subs    x7, x7, x1
- sbc     x12, x12, xzr
- b       loop2
-
-div_done:
- /* x5 = remainder, x0 = quotient */
- orr     x0, x0, x10
+ lsr     x6, x1, #32  /* x6 = b1 */
+ mov     w7, w1       /* x7 = b0 */
+ udiv    x8, x5, x6   /* x8 = q1 */
+ mul     x9, x8, x6
+ sub     x9, x5, x9   /* x9 = r */
+ mul     x10, x8, x7  /* x10 = q1*b0 */
+ lsr     x11, x4, #32
+ orr     x11, x11, x9, lsl #32 /* x11 = r*B + a1 */
+ cmp     x11, x10
+ b.hs    skip1
+ sub     x8, x8, #1
+ adds    x11, x11, x1
+ b.cs    skip1
+ cmp     x11, x10
+ b.hs    skip1
+ sub     x8, x8, #1
+ add     x11, x11, x1
+skip1:
+ sub     x11, x11, x10
+ /* second halfword */
+ udiv    x0, x11, x6  /* x0 = q0 */
+ mul     x12, x0, x6
+ sub     x5, x11, x12 /* x5 = r */
+ mul     x10, x0, x7  /* x10 = q0*b0 */
+ mov     w11, w4
+ orr     x11, x11, x5, lsl #32 /* x11 = r*B + a0 */
+ cmp     x11, x10
+ b.hs    skip2
+ sub     x0, x0, #1
+ adds    x11, x11, x1
+ b.cs    skip2
+ cmp     x11, x10
+ b.hs    skip2
+ sub     x0, x0, #1
+ add     x11, x11, x1
+skip2:
+ sub     x5, x11, x10 /* x5 = r^ */
+ orr     x0, x0, x8, lsl #32 /* x0 = q^ */
 
  mul     x7, x2, x0
  umulh   x4, x2, x0
