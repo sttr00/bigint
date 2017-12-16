@@ -48,6 +48,7 @@ void bigint_mul(bigint_t res, const bigint_t a, const bigint_t b);
 void bigint_mulw(bigint_t res, const bigint_t a, bigint_word_t w);
 void bigint_divmod(bigint_t q, bigint_t r, const bigint_t a, const bigint_t b);
 void bigint_mod(bigint_t r, const bigint_t a, const bigint_t b);
+bigint_word_t bigint_modw(const bigint_t a, bigint_word_t b);
 void bigint_mmul(bigint_t res, const bigint_t a, const bigint_t b, const bigint_t m);
 void bigint_mpow(bigint_t res, const bigint_t a, const bigint_t n, const bigint_t m);
 void bigint_madd(bigint_t res, const bigint_t a, const bigint_t b, const bigint_t m);

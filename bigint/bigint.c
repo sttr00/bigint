@@ -641,6 +641,27 @@ void bigint_mod(bigint_t r, const bigint_t a, const bigint_t b)
  if (btmp != b->buf) _bigint_free_temp(btmp, b->size);
 }
 
+bigint_word_t bigint_modw(const bigint_t a, bigint_word_t b)
+{
+ int i, bits;
+ bigint_word_t *rbuf, q;
+ assert(b);
+ bits = _bigint_w_clz(b);
+ rbuf = _bigint_alloc_temp(a->size + 1);
+ if (bits)
+ {
+  rbuf[a->size] = call_shl(rbuf, a->buf, bits, a->size);
+  b <<= bits;
+ } else
+ {
+  memcpy(rbuf, a->buf, a->size<<BIGINT_WORD_SHIFT);
+  rbuf[a->size] = 0;
+ }
+ for (i = a->size-1; i >= 0; i--)
+  _bigint_dw_ndiv(rbuf[i], rbuf[i+1], b, q, rbuf[i]);
+ return rbuf[0] >> bits;
+}
+
 void bigint_mmul(bigint_t res, const bigint_t a, const bigint_t b, const bigint_t m)
 {
  bigint_mul(res, a, b);
