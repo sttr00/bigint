@@ -54,7 +54,7 @@ void bigint_init_dispatch_table()
  feat = get_cpu_features();
  #if defined(ARCH_X86)
  #if 0
- if (feat & CPU_FEAT_AVX2)
+ if (feat & CPU_FEAT_X86_AVX2)
  {
   set_func2(add, sse2);
   set_func2(sub, sse2);
@@ -63,7 +63,7 @@ void bigint_init_dispatch_table()
   set_func2(mulsubw, sse2);
  } else
  #endif
- if (feat & CPU_FEAT_SSE2)
+ if (feat & CPU_FEAT_X86_SSE2)
  {
   set_func2(add, sse2);
   set_func2(sub, sse2);
@@ -71,21 +71,21 @@ void bigint_init_dispatch_table()
   set_func2(muladdw, sse2);
   set_func2(mulsubw, sse2);
  } else
- if (feat & CPU_FEAT_BMI2)
+ if (feat & CPU_FEAT_X86_BMI2)
  {
   set_func2(mulw, mulx);
   set_func2(muladdw, mulx);
   set_func2(mulsubw, mulx);
  }
  #elif defined(ARCH_X86_64)
- if (feat & CPU_FEAT_BMI2)
+ if (feat & CPU_FEAT_X86_BMI2)
  {
   set_func2(mulw, mulx);
   set_func2(muladdw, mulx);
   set_func2(mulsubw, mulx);
  }
  #elif defined(ARCH_ARM)
- if (feat & CPU_FEAT_UMAAL)
+ if (feat & CPU_FEAT_ARM_UMAAL)
   set_func2(muladdw, umaal);
  #endif
 

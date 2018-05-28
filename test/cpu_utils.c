@@ -10,24 +10,33 @@ struct feature_def
 
 static const struct feature_def fd[] =
 {
- { "sse",    CPU_FEAT_SSE       }, 
- { "sse2",   CPU_FEAT_SSE2      },
- { "sse3",   CPU_FEAT_SSE3      },
- { "clmul",  CPU_FEAT_PCLMULQDQ },
- { "ssse3",  CPU_FEAT_SSSE3     },
- { "fma",    CPU_FEAT_FMA       },
- { "sse41",  CPU_FEAT_SSE41     },
- { "sse42",  CPU_FEAT_SSE42     },
- { "avx",    CPU_FEAT_AVX       },
- { "rdrand", CPU_FEAT_RDRAND    },
- { "bmi1",   CPU_FEAT_BMI1      },
- { "avx2",   CPU_FEAT_AVX2      },
- { "bmi2",   CPU_FEAT_BMI2      },
- { "rdseed", CPU_FEAT_RDSEED    },
- { "adx",    CPU_FEAT_ADX       },
- { "sha",    CPU_FEAT_SHA       },
- { "umaal",  CPU_FEAT_UMAAL     },
- { "neon",   CPU_FEAT_NEON      }
+#if defined(ARCH_X86) || defined(ARCH_X86_64)
+ { "sse",    CPU_FEAT_X86_SSE       }, 
+ { "sse2",   CPU_FEAT_X86_SSE2      },
+ { "sse3",   CPU_FEAT_X86_SSE3      },
+ { "clmul",  CPU_FEAT_X86_PCLMULQDQ },
+ { "ssse3",  CPU_FEAT_X86_SSSE3     },
+ { "fma",    CPU_FEAT_X86_FMA       },
+ { "sse41",  CPU_FEAT_X86_SSE41     },
+ { "sse42",  CPU_FEAT_X86_SSE42     },
+ { "popcnt", CPU_FEAT_X86_POPCNT    },
+ { "avx",    CPU_FEAT_X86_AVX       },
+ { "rdrand", CPU_FEAT_X86_RDRAND    },
+ { "bmi1",   CPU_FEAT_X86_BMI1      },
+ { "avx2",   CPU_FEAT_X86_AVX2      },
+ { "bmi2",   CPU_FEAT_X86_BMI2      },
+ { "rdseed", CPU_FEAT_X86_RDSEED    },
+ { "adx",    CPU_FEAT_X86_ADX       },
+ { "sha",    CPU_FEAT_X86_SHA       }
+#elif defined(ARCH_ARM) || defined(ARCH_ARM64)
+ { "umaal",  CPU_FEAT_ARM_UMAAL     },
+ { "edsp",   CPU_FEAT_ARM_EDSP      },
+ { "vfp",    CPU_FEAT_ARM_VFP       },
+ { "vfp3",   CPU_FEAT_ARM_VFP3      },
+ { "neon",   CPU_FEAT_ARM_NEON      }
+#else
+ { NULL,     0                      }
+#endif
 };
 
 uint32_t get_cpu_feature_by_name(const char *name)

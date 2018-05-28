@@ -2,6 +2,9 @@
 
 #undef ARCH_INTEL
 #undef ARCH_ARM
+#undef ARCH_ARM64
+#undef HAVE_LINUX_HWCAP
+#undef USE_LINUX_HWCAP
 
 #ifdef _MSC_VER
 
@@ -40,6 +43,19 @@ extern uint32_t xgetbv_impl(uint32_t val);
 
 #elif defined(__GNUC__)
 
+#if defined(linux) || defined(__linux__) || defined(ANDROID)
+#define HAVE_LINUX_HWCAP
+struct feature_def
+{
+ const char *name;
+ uint32_t hwcap_flag;
+ uint32_t feature_flag;
+};
+#define AT_PLATFORM 15
+#define AT_HWCAP    16
+#define AT_HWCAP2   26
+#endif
+
 #if defined(__i386__) || defined(__amd64__)
 #define ARCH_INTEL
 static __inline uint32_t xgetbv(uint32_t val)
@@ -62,23 +78,29 @@ static __inline void cpuid(uint32_t *out, uint32_t eax, uint32_t ecx)
 #endif
 }
 #elif defined(__arm__)
-#if defined(linux) || defined(__linux__) || defined(ANDROID)
-static struct
-{
- const char *name;
- uint32_t flag;
-} const features_arm[] =
-{
- { "edsp",  CPU_FEAT_EDSP },
- { "vfp",   CPU_FEAT_VFP  },
- { "vfpv3", CPU_FEAT_VFP3 },
- { "neon",  CPU_FEAT_NEON },
- { "asimd", CPU_FEAT_NEON },
- { "fp",    CPU_FEAT_VFP | CPU_FEAT_VFP3 }
-};
-#define FEATURES_DEF features_arm
-#endif
 #define ARCH_ARM
+#ifdef HAVE_LINUX_HWCAP
+static const struct feature_def features[] =
+{
+ { "edsp",  1 << 7,  CPU_FEAT_ARM_EDSP },
+ { "vfp",   1 << 6,  CPU_FEAT_ARM_VFP  },
+ { "vfpv3", 1 << 13, CPU_FEAT_ARM_VFP3 },
+ { "neon",  1 << 12, CPU_FEAT_ARM_NEON },
+ { "asimd", 1 << 12, CPU_FEAT_ARM_NEON },
+ { "fp",    0,       CPU_FEAT_ARM_VFP | CPU_FEAT_ARM_VFP3 }
+};
+#define USE_LINUX_HWCAP
+#endif /* HAVE_LINUX_HWCAP */
+#elif defined(__aarch64__)
+#define ARCH_ARM64
+#ifdef HAVE_LINUX_HWCAP
+static const struct feature_def features[] =
+{
+ { "fp",    1 << 0, CPU_FEAT_ARM_VFP | CPU_FEAT_ARM_VFP3 },
+ { "asimd", 1 << 1, CPU_FEAT_ARM_NEON }
+};
+#define USE_LINUX_HWCAP
+#endif /* HAVE_LINUX_HWCAP */
 #endif
 
 #else
@@ -87,65 +109,33 @@ static struct
 
 #endif
 
-#ifdef FEATURES_DEF
+#ifdef USE_LINUX_HWCAP
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
 
+#define FEATURE_COUNT (sizeof(features)/sizeof(features[0]))
+
 static uint32_t parse_feature(char *start, char *end)
 {
  int i;
  *end = 0;
- for (i=0; i<sizeof(FEATURES_DEF)/sizeof(FEATURES_DEF[0]); i++)
-  if (!strcmp(start, FEATURES_DEF[i].name)) return FEATURES_DEF[i].flag;
+ for (i=0; i<FEATURE_COUNT; i++)
+  if (!strcmp(start, features[i].name)) return features[i].feature_flag;
  return 0;
 }
-#endif /* FEATURES_DEF */
 
-static uint32_t get_cpu_features_real()
+static int get_features_from_cpuinfo(uint32_t *result)
 {
- uint32_t feat = 0;
-#if defined(ARCH_INTEL)
- uint32_t out[4];
- uint32_t max_eax;
- uint32_t xcr0 = 0;
- cpuid(out, 0, 0);
- max_eax = out[0];
- if (max_eax >= 1)
- {
-  cpuid(out, 1, 0);
-  /* edx */
-  if (out[3] & 1<<25) feat |= CPU_FEAT_SSE;
-  if (out[3] & 1<<26) feat |= CPU_FEAT_SSE2;
-  /* ecx */
-  if (out[2] & 1<<27) xcr0 = xgetbv(0);
-  if (out[2] & 1<<0)  feat |= CPU_FEAT_SSE3;
-  if (out[2] & 1<<1)  feat |= CPU_FEAT_PCLMULQDQ;
-  if (out[2] & 1<<9)  feat |= CPU_FEAT_SSSE3;
-  if (out[2] & 1<<12) feat |= CPU_FEAT_FMA;
-  if (out[2] & 1<<19) feat |= CPU_FEAT_SSE41;
-  if (out[2] & 1<<20) feat |= CPU_FEAT_SSE42;
-  if ((out[2] & 1<<28) && (xcr0 & 6) == 6) feat |= CPU_FEAT_AVX;
-  if (out[2] & 1<<30) feat |= CPU_FEAT_RDRAND;
-  if (max_eax >= 7)
-  {
-   cpuid(out, 7, 0);
-   /* ebx */
-   if (out[1] & 1<<3)  feat |= CPU_FEAT_BMI1;
-   if ((out[1] & 1<<5) && (xcr0 & 6) == 6) feat |= CPU_FEAT_AVX2;
-   if (out[1] & 1<<8)  feat |= CPU_FEAT_BMI2;
-   if (out[1] & 1<<18) feat |= CPU_FEAT_RDSEED;
-   if (out[1] & 1<<19) feat |= CPU_FEAT_ADX;
-   if (out[1] & 1<<29) feat |= CPU_FEAT_SHA;
-  }
- }
-#elif defined(FEATURES_DEF)
  char buf[2048];
  int fd = open("/proc/cpuinfo", O_RDONLY);
+ *result = 0;
  if (fd >= 0)
  {
+  #ifdef ARCH_ARM
   int cpu_arch = 0;
+  #endif
   int data_size = 0, line_len, pos;
   for (;;)
   {
@@ -169,15 +159,16 @@ static uint32_t get_cpu_features_real()
        {
         if (start)
         {
-         feat |= parse_feature(start, p);
+         *result |= parse_feature(start, p);
          start = NULL;
         }
        } else
        if (!start) start = p;
-      if (start) feat |= parse_feature(start, end);
+      if (start) *result |= parse_feature(start, end);
      }
-    } else
-    if (line_len > 16 && !memcmp(buf + pos, "CPU architecture", 16))
+    }
+    #ifdef ARCH_ARM
+    else if (line_len > 16 && !memcmp(buf + pos, "CPU architecture", 16))
     {
      char *p = memchr(buf + pos, ':', line_len);
      if (p)
@@ -191,6 +182,7 @@ static uint32_t get_cpu_features_real()
        }
      }
     }
+    #endif
     pos += line_len + 1;
    }
    data_size -= pos;
@@ -198,12 +190,113 @@ static uint32_t get_cpu_features_real()
   }
   close(fd);
   #ifdef ARCH_ARM
-  if (!cpu_arch) cpu_arch = 7; /* assume ARMv7 */
-  if (cpu_arch >= 6) feat |= CPU_FEAT_UMAAL;
+  if (cpu_arch >= 6) *result |= CPU_FEAT_ARM_UMAAL;
   #endif
+  return 1;
  }
+ return 0;
+}
+
+enum
+{
+ FOUND_HWCAP    = 1,
+ FOUND_PLATFORM = 2
+};
+
+#ifdef ARCH_ARM
+#define FIND_WHAT (FOUND_HWCAP | FOUND_PLATFORM)
+#else
+#define FIND_WHAT FOUND_HWCAP
 #endif
 
+static int get_features_from_auxv(uint32_t *result)
+{
+ long data[2048/sizeof(long)];
+ int rv = 0;
+ int fd = open("/proc/self/auxv", O_RDONLY);
+ #ifdef ARCH_ARM
+ int cpu_arch = 0;
+ #endif
+ *result = 0;
+ if (fd >= 0)
+ {
+  int i, j, found = 0;
+  int size = read(fd, data, sizeof(data));
+  if (size > 0)
+  {
+   size /= sizeof(long);
+   for (i=0; i<size-1; i+=2)
+    if (data[i] == AT_HWCAP)
+    {
+     for (j=0; j<FEATURE_COUNT; j++)
+      if (data[i+1] & features[j].hwcap_flag)
+       *result |= features[j].feature_flag;
+     rv = 1;
+     found |= FOUND_HWCAP;
+     if (found == FIND_WHAT) break;
+    }
+    #ifdef ARCH_ARM
+    else if (data[i] == AT_PLATFORM)
+    {
+     const char *text = (const char *) data[i+1];
+     if (text[0] == 'v' && text[1] >= '0' && text[1] <= '9')
+      cpu_arch = text[1]-'0';
+     found |= FOUND_PLATFORM;
+     if (found == FIND_WHAT) break;
+    }
+    #endif
+  }
+  close(fd);
+ }
+ #ifdef ARCH_ARM
+ if (rv && cpu_arch >= 6) *result |= CPU_FEAT_ARM_UMAAL;
+ #endif
+ return rv;
+}
+#endif /* USE_LINUX_HWCAP */
+
+static uint32_t get_cpu_features_real()
+{
+ uint32_t feat = 0;
+ #if defined(ARCH_INTEL)
+ uint32_t out[4];
+ uint32_t max_eax;
+ uint32_t xcr0 = 0;
+ cpuid(out, 0, 0);
+ max_eax = out[0];
+ if (max_eax >= 1)
+ {
+  cpuid(out, 1, 0);
+  /* edx */
+  if (out[3] & 1<<25) feat |= CPU_FEAT_X86_SSE;
+  if (out[3] & 1<<26) feat |= CPU_FEAT_X86_SSE2;
+  /* ecx */
+  if (out[2] & 1<<27) xcr0 = xgetbv(0);
+  if (out[2] & 1<<0)  feat |= CPU_FEAT_X86_SSE3;
+  if (out[2] & 1<<1)  feat |= CPU_FEAT_X86_PCLMULQDQ;
+  if (out[2] & 1<<9)  feat |= CPU_FEAT_X86_SSSE3;
+  if (out[2] & 1<<12) feat |= CPU_FEAT_X86_FMA;
+  if (out[2] & 1<<19) feat |= CPU_FEAT_X86_SSE41;
+  if (out[2] & 1<<20) feat |= CPU_FEAT_X86_SSE42;
+  if (out[2] & 1<<23) feat |= CPU_FEAT_X86_POPCNT;
+  if ((out[2] & 1<<28) && (xcr0 & 6) == 6) feat |= CPU_FEAT_X86_AVX;
+  if (out[2] & 1<<30) feat |= CPU_FEAT_X86_RDRAND;
+  if (max_eax >= 7)
+  {
+   cpuid(out, 7, 0);
+   /* ebx */
+   if (out[1] & 1<<3)  feat |= CPU_FEAT_X86_BMI1;
+   if ((out[1] & 1<<5) && (xcr0 & 6) == 6) feat |= CPU_FEAT_X86_AVX2;
+   if (out[1] & 1<<8)  feat |= CPU_FEAT_X86_BMI2;
+   if (out[1] & 1<<18) feat |= CPU_FEAT_X86_RDSEED;
+   if (out[1] & 1<<19) feat |= CPU_FEAT_X86_ADX;
+   if (out[1] & 1<<29) feat |= CPU_FEAT_X86_SHA;
+  }
+ }
+ #elif defined(USE_LINUX_HWCAP)
+ if (!get_features_from_auxv(&feat))
+  get_features_from_cpuinfo(&feat);
+ #endif
  return feat;
 }
 
