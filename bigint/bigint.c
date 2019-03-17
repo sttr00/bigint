@@ -974,7 +974,6 @@ void bigint_set_bytes_be(bigint_t num, const void *data, int size)
 
 void bigint_set_bytes_le(bigint_t num, const void *data, int size)
 {
- ;
  int i, nz_size = size, max, bytes, words;
  const uint8_t *in = (const uint8_t *) data;
  while (nz_size)
